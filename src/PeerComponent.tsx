@@ -16,4 +16,4 @@ function PeerComponent(props: {resources?: Resources, children: ReactNode}) {
     );
 }
 
-export default PeerComponent;
+export { PeerComponent };
