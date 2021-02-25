@@ -156,7 +156,7 @@ const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
                 obj.watchForChanges(true);
                 obj.loadAllChanges().then(() => {
                     if (!destroyed) {
-                        console.log('sate loaded for ' + obj.hash() + '!');
+                        console.log('@hyper-hyper-space/react: State loaded for ' + obj.hash());
                         setSateObject(new StateObject(obj));
                         obj.addMutationCallback(mutCallback);    
                     }
