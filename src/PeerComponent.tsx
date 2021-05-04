@@ -3,9 +3,9 @@ import { ReactNode, useState } from 'react';
 import { PeerResources, PeerResourcesUpdater } from './bindings';
 import React from 'react';
 
-function PeerComponent(props: {resources?: Resources, children: ReactNode}) {
+function PeerComponent(props: {resources: Resources, children: ReactNode}) {
 
-    const [resources, setResources] = useState<Resources>(props.resources || new Resources());
+    const [resources, setResources] = useState<Resources>(props.resources);
 
     return (
         <PeerResources.Provider value={resources}>

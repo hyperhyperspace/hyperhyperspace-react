@@ -2,7 +2,7 @@ import { Hash, HashedObject, MutableObject, MutationOp, Resources, Space, SpaceE
 import React, { useContext, useState, useEffect } from 'react';
 
 
-const PeerResources = React.createContext<Resources>(new Resources());
+const PeerResources = React.createContext<Resources>(Resources.dummy());
 const PeerResourcesUpdater = React.createContext<React.Dispatch<React.SetStateAction<Resources>>>(() => { });
 
 const usePeerResources: () => Resources = () => {
