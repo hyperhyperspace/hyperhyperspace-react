@@ -2,16 +2,15 @@
 # yarn lockfile v1
 
 
-"@hyper-hyper-space/core@0.6.1":
-  version "0.6.1"
-  resolved "https://registry.yarnpkg.com/@hyper-hyper-space/core/-/core-0.6.1.tgz#9be61a4bf80514bb3bd77a0889cf68e5b10a93ab"
-  integrity sha512-2O2Cx1VO1VjP+nI6A8ra+e6vZBEcPNQJ2TV4Nz/hj9EMAatAnlwA9mjKU0nXgoPkXpD9wZej7SQUO6B4NDT7jg==
+"@hyper-hyper-space/core@0.6.3":
+  version "0.6.3"
+  resolved "https://registry.yarnpkg.com/@hyper-hyper-space/core/-/core-0.6.3.tgz#5bb61f9bdab3c630820ff51a060456ddca71a5c0"
+  integrity sha512-7Bya/3RAtEWFSJUmd+hbuRq2V3DJnConXI7gwptTC0WgnZkl/fK7AWCkd5TCxzogkgo4ucnw/mrerXowg+bauw==
   dependencies:
-    "@types/node" "^14.0.13"
     chacha-js "^2.1.1"
     get-random-values "^1.2.0"
     idb "^5.0.4"
-    jsencrypt "^3.0.0-rc.1"
+    jsencrypt "3.0.0-rc.1"
     jshashes "^1.0.8"
     tslib "^2.0.1"
 
@@ -25,11 +24,6 @@
     fake-indexeddb "^3.1.2"
     wrtc "^0.4.6"
     ws "^7.4.0"
-
-"@types/node@^14.0.13":
-  version "14.14.22"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-14.14.22.tgz#0d29f382472c4ccf3bd96ff0ce47daf5b7b84b18"
-  integrity sha512-g+f/qj/cNcqKkc3tFqlXOYjrmZA+jNBiDzbP3kH+B+otKFqAdPgVTGP1IeKRdMml/aE69as5S4FqtxAbl+LaMw==
 
 "@types/prop-types@*":
   version "15.7.3"
@@ -340,7 +334,7 @@ isarray@~1.0.0:
   resolved "https://registry.yarnpkg.com/js-tokens/-/js-tokens-4.0.0.tgz#19203fb59991df98e3a287050d4647cdeaf32499"
   integrity sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==
 
-jsencrypt@^3.0.0-rc.1:
+jsencrypt@3.0.0-rc.1:
   version "3.0.0-rc.1"
   resolved "https://registry.yarnpkg.com/jsencrypt/-/jsencrypt-3.0.0-rc.1.tgz#0e0a4744ba43cc557fb5cf62fe8646bceb561b1c"
   integrity sha512-gcvGaqerlUJy1Kq6tNgPYteVEoWNemu+9hBe2CdsCIz4rVcwjoTQ72iD1W76/PRMlnkzG0yVh7nwOOMOOUfKmg==
