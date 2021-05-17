@@ -91,15 +91,19 @@ const useStateObjectByHash = <T extends HashedObject>(hash?: Hash) => {
 
         if (hash !== undefined) {
             resources.store?.load(hash).then((obj: HashedObject|undefined) => {
-                if (obj !== undefined && obj instanceof MutableObject) {
+                if (obj !== undefined) {
+                    if (obj instanceof MutableObject) {
                     
-                    obj.watchForChanges(true);
-                    obj.loadAllChanges().then(() => {
-                        if (!destroyed) {
-                            setSateObject(new StateObject(obj as any as T));
-                            obj.addMutationCallback(mutCallback);    
-                        }
-                    });
+                        obj.watchForChanges(true);
+                        obj.loadAllChanges().then(() => {
+                            if (!destroyed) {
+                                setSateObject(new StateObject(obj as any as T));
+                                obj.addMutationCallback(mutCallback);    
+                            }
+                        });
+                    } else {
+                        setSateObject(new StateObject(obj as any as T));
+                    }
                 }
             });
         }
@@ -151,16 +155,23 @@ const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
 
             loadedObj = obj;
 
-            if (obj !== undefined && obj instanceof MutableObject) {
-                
-                obj.watchForChanges(true);
-                obj.loadAllChanges().then(() => {
+            if (obj !== undefined) {
+
+                if (obj instanceof MutableObject) {
+                    obj.watchForChanges(true);
+                    obj.loadAllChanges().then(() => {
+                        if (!destroyed) {
+                            console.log('@hyper-hyper-space/react: State loaded for ' + obj.hash());
+                            setSateObject(new StateObject(obj));
+                            obj.addMutationCallback(mutCallback);    
+                        }
+                    });
+                } else {
                     if (!destroyed) {
-                        console.log('@hyper-hyper-space/react: State loaded for ' + obj.hash());
+                        console.log('@hyper-hyper-space/react: Loaded ' + obj.hash());
                         setSateObject(new StateObject(obj));
-                        obj.addMutationCallback(mutCallback);    
                     }
-                });
+                }
             }
     
         });
