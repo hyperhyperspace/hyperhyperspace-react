@@ -13,46 +13,52 @@ const usePeerResourcesUpdater: () => React.Dispatch<React.SetStateAction<Resourc
     return useContext(PeerResourcesUpdater);
 } 
 
-const useSpace = <T extends HashedObject>(init: SpaceInit, broadcast?: boolean) => {
+const useSpace = <T extends HashedObject>(init?: SpaceInit, broadcast?: boolean) => {
     const resources = usePeerResources();
 
     const [entryPoint, setEntryPoint] = useState<HashedObject|undefined>(undefined);
 
     useEffect(() => {
 
-        const space = new Space(init, resources);
-        const doBroadcast = broadcast !== undefined? broadcast : init.wordCode !== undefined;
+        const space = init !== undefined? new Space(init, resources) : undefined;
         let initialized = false;
         let destroyed = false;
-        space.entryPoint.then(async (obj: HashedObject & SpaceEntryPoint) => {
-            if (!destroyed) {
 
-                if (doBroadcast) {
-                    space.startBroadcast();
-                }
+        const doBroadcast = broadcast !== undefined? broadcast : init?.wordCode !== undefined;
 
-                obj.setResources(resources);
-                if (resources.store) {
-                    await resources.store.save(obj);
-                }
-                obj.startSync();
-
-                setEntryPoint(obj);
-
-                initialized = true;
-            }
+        if (space !== undefined && init !== undefined) {
             
-        });
+            
+            space.entryPoint.then(async (obj: HashedObject & SpaceEntryPoint) => {
+                if (!destroyed) {
+
+                    if (doBroadcast) {
+                        space.startBroadcast();
+                    }
+
+                    obj.setResources(resources);
+                    if (resources.store) {
+                        await resources.store.save(obj);
+                    }
+                    obj.startSync();
+
+                    setEntryPoint(obj);
+
+                    initialized = true;
+                }
+                
+            });
+        }
 
         return () => {
             destroyed = true;
 
             if (initialized) {
                 if (doBroadcast) {
-                    space.stopBroadcast();
+                    space?.stopBroadcast();
                 }
 
-                space.getEntryPoint().then((obj: HashedObject & SpaceEntryPoint) => {
+                space?.getEntryPoint().then((obj: HashedObject & SpaceEntryPoint) => {
                     obj.stopSync();
                 });
             }
