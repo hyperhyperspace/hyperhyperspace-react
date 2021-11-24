@@ -13,7 +13,7 @@ const usePeerResourcesUpdater: () => React.Dispatch<React.SetStateAction<Resourc
     return useContext(PeerResourcesUpdater);
 } 
 
-const useSpace = <T extends HashedObject>(init?: SpaceInit, broadcast?: boolean) => {
+const useSpace = <T extends HashedObject>(init?: SpaceInit, broadcast?: boolean, sync=true) => {
     const resources = usePeerResources();
 
     const [entryPoint, setEntryPoint] = useState<HashedObject|undefined>(undefined);
@@ -40,7 +40,10 @@ const useSpace = <T extends HashedObject>(init?: SpaceInit, broadcast?: boolean)
                     if (resources.store) {
                         await resources.store.save(obj);
                     }
-                    obj.startSync();
+
+                    if (sync) {
+                        obj.startSync();
+                    }
 
                     setEntryPoint(obj);
 
@@ -79,7 +82,7 @@ class StateObject<T extends HashedObject> {
     }
 }
 
-const useStateObjectByHash = <T extends HashedObject>(hash?: Hash) => {
+const useStateObjectByHash = <T extends HashedObject>(hash?: Hash, renderOnLoadAll=false) => {
 
     const resources = usePeerResources();
     const [stateObject, setSateObject] = useState<StateObject<T> | undefined> (undefined);
@@ -99,15 +102,20 @@ const useStateObjectByHash = <T extends HashedObject>(hash?: Hash) => {
             resources.store?.load(hash).then((obj: HashedObject|undefined) => {
                 if (obj !== undefined) {
                     if (obj instanceof MutableObject) {
-                    
-                        obj.watchForChanges(true);
-                        obj.loadAllChanges().then(() => {
+                        if (renderOnLoadAll) {
+                            obj.addMutationCallback(mutCallback);    
+                        }
+                        
+                        obj.loadAndWatchForChanges().then(() => {
                             if (!destroyed) {
                                 setSateObject(new StateObject(obj as any as T));
-                                obj.addMutationCallback(mutCallback);    
+                                if (!renderOnLoadAll) {
+                                    obj.addMutationCallback(mutCallback);    
+                                }
                             }
                         });
-                    } else {
+                    }
+                    if (!destroyed) {
                         setSateObject(new StateObject(obj as any as T));
                     }
                 }
@@ -131,10 +139,10 @@ const useStateObjectByHash = <T extends HashedObject>(hash?: Hash) => {
  };
 
 
-const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | undefined>) => {
+const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | undefined>, renderOnLoadAll=false) => {
 
     const init = objOrPromise instanceof HashedObject? objOrPromise : undefined;
-    const [stateObject, setSateObject] = useState<StateObject<T> | undefined> (new StateObject(init));
+    const [stateObject, setStateObject] = useState<StateObject<T> | undefined> (new StateObject(init));
 
     useEffect(() => {
 
@@ -152,7 +160,7 @@ const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
 
         let destroyed = false;
         let mutCallback = (_mut: MutationOp) => {
-            setSateObject(new StateObject(loadedObj));
+            setStateObject(new StateObject(loadedObj));
         }
 
         
@@ -164,19 +172,23 @@ const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
             if (obj !== undefined) {
 
                 if (obj instanceof MutableObject) {
-                    obj.watchForChanges(true);
-                    obj.loadAllChanges().then(() => {
+                    if (renderOnLoadAll) {
+                        obj.addMutationCallback(mutCallback);
+                    }
+                    obj.loadAndWatchForChanges().then(() => {
                         if (!destroyed) {
                             console.log('@hyper-hyper-space/react: State loaded for ' + obj.hash());
-                            setSateObject(new StateObject(obj));
-                            obj.addMutationCallback(mutCallback);    
+                            console.log((obj as any)._loadedAllChanges)
+                            setStateObject(new StateObject(obj));
+                            if (!renderOnLoadAll) {
+                                obj.addMutationCallback(mutCallback);
+                            }
                         }
                     });
-                } else {
-                    if (!destroyed) {
-                        console.log('@hyper-hyper-space/react: Loaded ' + obj.hash());
-                        setSateObject(new StateObject(obj));
-                    }
+                }
+                if (!destroyed) {
+                    console.log('@hyper-hyper-space/react: Loaded ' + obj.hash());
+                    setStateObject(new StateObject(obj));
                 }
             }
     
