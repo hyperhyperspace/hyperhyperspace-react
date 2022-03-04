@@ -103,14 +103,14 @@ const useStateObjectByHash = <T extends HashedObject>(hash?: Hash, renderOnLoadA
                 if (obj !== undefined) {
                     if (obj instanceof MutableObject) {
                         if (renderOnLoadAll) {
-                            obj.addMutationCallback(mutCallback);    
+                            obj.addMutationOpCallback(mutCallback);    
                         }
                         
                         obj.loadAndWatchForChanges().then(() => {
                             if (!destroyed) {
                                 setSateObject(new StateObject(obj as any as T));
                                 if (!renderOnLoadAll) {
-                                    obj.addMutationCallback(mutCallback);    
+                                    obj.addMutationOpCallback(mutCallback);    
                                 }
                             }
                         });
@@ -129,7 +129,7 @@ const useStateObjectByHash = <T extends HashedObject>(hash?: Hash, renderOnLoadA
 
             if (hash !== undefined && obj !== undefined && obj instanceof MutableObject) {
                 obj.watchForChanges(false);
-                obj.deleteMutationCallback(mutCallback);
+                obj.deleteMutationOpCallback(mutCallback);
             }  
         };
     }, [resources, hash]);
@@ -173,7 +173,7 @@ const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
 
                 if (obj instanceof MutableObject) {
                     if (renderOnLoadAll) {
-                        obj.addMutationCallback(mutCallback);
+                        obj.addMutationOpCallback(mutCallback);
                     }
                     obj.loadAndWatchForChanges().then(() => {
                         if (!destroyed) {
@@ -181,7 +181,7 @@ const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
                             console.log((obj as any)._loadedAllChanges)
                             setStateObject(new StateObject(obj));
                             if (!renderOnLoadAll) {
-                                obj.addMutationCallback(mutCallback);
+                                obj.addMutationOpCallback(mutCallback);
                             }
                         }
                     });
@@ -201,7 +201,7 @@ const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
 
             if (loadedObj !== undefined && loadedObj instanceof MutableObject) {
                 loadedObj.watchForChanges(false);
-                loadedObj.deleteMutationCallback(mutCallback);
+                loadedObj.deleteMutationOpCallback(mutCallback);
             }  
         };
     }, [objOrPromise]);
