@@ -211,4 +211,4 @@ const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
  };
 
 
-export { PeerResources, usePeerResources, PeerResourcesUpdater, usePeerResourcesUpdater, useSpace, useStateObject, useStateObjectByHash };
+export { StateObject, PeerResources, usePeerResources, PeerResourcesUpdater, usePeerResourcesUpdater, useSpace, useStateObject, useStateObjectByHash };
