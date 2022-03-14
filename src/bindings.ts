@@ -1,4 +1,5 @@
-import { Hash, HashedObject, MutableObject, MutationOp, Resources, Space, SpaceEntryPoint, SpaceInit } from '@hyper-hyper-space/core';
+import { Hash, HashedObject, MutableObject, MutationOp, ObjectDiscoveryReply, Resources, Space, SpaceEntryPoint, SpaceInit, WordCode } from '@hyper-hyper-space/core';
+import { AsyncStream } from '@hyper-hyper-space/core/dist/util/streams';
 import React, { useContext, useState, useEffect } from 'react';
 
 
@@ -177,8 +178,6 @@ const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
                     }
                     obj.loadAndWatchForChanges().then(() => {
                         if (!destroyed) {
-                            console.log('@hyper-hyper-space/react: State loaded for ' + obj.hash());
-                            console.log((obj as any)._loadedAllChanges)
                             setStateObject(new StateObject(obj));
                             if (!renderOnLoadAll) {
                                 obj.addMutationOpCallback(mutCallback);
@@ -187,7 +186,6 @@ const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
                     });
                 }
                 if (!destroyed) {
-                    console.log('@hyper-hyper-space/react: Loaded ' + obj.hash());
                     setStateObject(new StateObject(obj));
                 }
             }
@@ -210,5 +208,68 @@ const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
 
  };
 
+ const useObjectDiscovery = (wordCode?: string, lang='en', count=10, includeErrors=false) => {
 
-export { StateObject, PeerResources, usePeerResources, PeerResourcesUpdater, usePeerResourcesUpdater, useSpace, useStateObject, useStateObjectByHash };
+    const resources = usePeerResources();
+    const [results, setResults] = useState<Map<Hash, ObjectDiscoveryReply>>(new Map());
+    
+    const words = wordCode !== undefined? wordCode.split('-') : undefined;
+    
+    useEffect(() => {
+        if (words !== undefined) {
+
+            const wordcoder = WordCode.lang.get(lang);
+
+            if (wordcoder === undefined) {
+                throw new Error('Unknown language for decoding word code: ' + lang);
+            }
+        
+            const suffix = wordcoder.decode(words);
+        
+            if (resources.config.peersForDiscovery === undefined) {
+                throw new Error('Trying to do object discovery for words ' + words.join('-') + ', but config.peersForDiscovery is undefined.');
+            }
+        
+            const linkupServers = resources.config.linkupServers;
+            const discoveryEndpoint = resources.config.peersForDiscovery[0].endpoint;
+            
+            const replyStream = resources.mesh.findObjectByHashSuffix(suffix, linkupServers, discoveryEndpoint, count, 30, false, includeErrors);
+
+            const currentResults = new Map();
+            processReplyStream(replyStream as AsyncStream<ObjectDiscoveryReply>, currentResults, setResults);
+
+            return () => {
+                replyStream.close();
+                setResults(new Map());
+            };
+        }
+
+        return undefined;
+    }, [wordCode, lang, count]);
+    
+
+
+    return results;
+ }
+
+ const processReplyStream = async (replyStream: AsyncStream<ObjectDiscoveryReply>, currentResults: Map<Hash, ObjectDiscoveryReply>, setResults: (r: Map<Hash, ObjectDiscoveryReply>) => void) => {
+
+    try {
+        while (true) {
+            let next = await replyStream.next(30000);
+            
+            const current = currentResults.get(next.hash);
+
+            if (current === undefined || (current.object === undefined && next.object !== undefined)) {
+                currentResults.set(next.hash, next);
+                setResults(new Map(currentResults.entries()));
+            }            
+        }
+    } catch (e: any) {
+        // done, timeouted or completed
+    }
+
+ }
+
+
+export { StateObject, PeerResources, usePeerResources, PeerResourcesUpdater, usePeerResourcesUpdater, useSpace, useStateObject, useStateObjectByHash, useObjectDiscovery };
