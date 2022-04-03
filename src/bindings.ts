@@ -1,4 +1,4 @@
-import { Hash, HashedObject, MutableObject, MutationOp, ObjectDiscoveryReply, Resources, Space, SpaceEntryPoint, SpaceInit, WordCode } from '@hyper-hyper-space/core';
+import { Hash, HashedObject, MutableObject, MutationEvent, MutationObserver, MutationOp, ObjectDiscoveryReply, Resources, Space, SpaceEntryPoint, SpaceInit, WordCode } from '@hyper-hyper-space/core';
 import { AsyncStream } from '@hyper-hyper-space/core/dist/util/streams';
 import React, { useContext, useState, useEffect } from 'react';
 
@@ -83,6 +83,8 @@ class StateObject<T extends HashedObject> {
     }
 }
 
+// This function loads the object by its hash from the store and sets up store watching.
+
 const useStateObjectByHash = <T extends HashedObject>(hash?: Hash, renderOnLoadAll=false) => {
 
     const resources = usePeerResources();
@@ -140,6 +142,10 @@ const useStateObjectByHash = <T extends HashedObject>(hash?: Hash, renderOnLoadA
  };
 
 
+
+// This binding uses the object as-is: it doesn't attempt to set up store watching.
+// The caller should pass an object that's ready (bound to the store, etc.).
+
 const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | undefined>, renderOnLoadAll=false) => {
 
     const init = objOrPromise instanceof HashedObject? objOrPromise : undefined;
@@ -160,10 +166,15 @@ const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
         let loadedObj: T | undefined;
 
         let destroyed = false;
-        let mutCallback = (_mut: MutationOp) => {
-            setStateObject(new StateObject(loadedObj));
-        }
+        //let mutCallback = (_mut: MutationOp) => {
+        //    setStateObject(new StateObject(loadedObj));
+        //}
 
+        let mutObserver: MutationObserver = {
+            callback: (_ev: MutationEvent) => {
+                setStateObject(new StateObject(loadedObj));
+            }
+        };
         
 
         prom?.then(obj => {
@@ -174,13 +185,15 @@ const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
 
                 if (obj instanceof MutableObject) {
                     if (renderOnLoadAll) {
-                        obj.addMutationOpCallback(mutCallback);
+                        obj.addMutationObserver(mutObserver);
+                        //obj.addMutationOpCallback(mutCallback);
                     }
                     obj.loadAndWatchForChanges().then(() => {
                         if (!destroyed) {
                             setStateObject(new StateObject(obj));
                             if (!renderOnLoadAll) {
-                                obj.addMutationOpCallback(mutCallback);
+                                obj.addMutationObserver(mutObserver);
+                                //obj.addMutationOpCallback(mutCallback);
                             }
                         }
                     });
@@ -199,7 +212,8 @@ const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
 
             if (loadedObj !== undefined && loadedObj instanceof MutableObject) {
                 loadedObj.watchForChanges(false);
-                loadedObj.deleteMutationOpCallback(mutCallback);
+                loadedObj.removeMutationObserver(mutObserver);
+                //loadedObj.deleteMutationOpCallback(mutCallback);
             }  
         };
     }, [objOrPromise]);
