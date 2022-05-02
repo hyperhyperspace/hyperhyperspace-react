@@ -275,10 +275,7 @@ const useStateObjectByHash = <T extends HashedObject>(hash?: Hash, renderOnLoadA
 // This binding uses the object as-is: it doesn't attempt to set up store watching.
 // The caller should pass an object that's ready (bound to the store, etc.).
 
-const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | undefined>, renderOnLoadAll=false) => {
-
-
-    renderOnLoadAll;
+const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | undefined>, filterMutations?:(ev: MutationEvent) => boolean) => {
 
     const init = objOrPromise instanceof HashedObject? objOrPromise : undefined;
     const [stateObject, setStateObject] = useState<StateObject<T> | undefined> (new StateObject(init));
@@ -303,11 +300,16 @@ const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
         //}
 
         let mutObserver: MutationObserver =
-            (_ev: MutationEvent) => {
+            (ev: MutationEvent) => {
                 console.log('new state for ' + loadedObj?.hash() + ':');
-                console.log(_ev)
-                setStateObject(new StateObject(loadedObj));
-        };
+                console.log(ev)
+                if (filterMutations === undefined || filterMutations(ev)) {
+                    setStateObject(new StateObject(loadedObj));
+                } else { 
+                    console.log('rejecting:');
+                    console.log(ev);
+                }
+            };
         
 
         prom?.then(obj => {
