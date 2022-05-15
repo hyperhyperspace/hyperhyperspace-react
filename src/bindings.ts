@@ -1,4 +1,4 @@
-import { Hash, HashedObject, MutableObject, MutationEvent, MutationObserver, MutationOp, ObjectDiscoveryReply, Resources, Space, SpaceEntryPoint, SpaceInit, WordCode } from '@hyper-hyper-space/core';
+import { Hash, HashedObject, MutableObject, MutationEvent, MutationObserver, MutationOp, ObjectBroadcastAgent, ObjectDiscoveryReply, Resources, Space, SpaceEntryPoint, SpaceInit, WordCode } from '@hyper-hyper-space/core';
 import { AsyncStream } from '@hyper-hyper-space/core/dist/util/streams';
 import React, { useContext, useState, useEffect } from 'react';
 
@@ -359,14 +359,18 @@ const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
  };
 
  const useObjectDiscovery = (wordCode?: string, lang='en', count=10, includeErrors=false) => {
+    return useObjectDiscoveryWithResources(usePeerResources(), wordCode, lang, count, includeErrors);
+ }
 
-    const resources = usePeerResources();
+
+ const useObjectDiscoveryWithResources = (resources?: Resources, wordCode?: string, lang='en', count=10, includeErrors=false) => {
+
     const [results, setResults] = useState<Map<Hash, ObjectDiscoveryReply>>(new Map());
     
     const words = wordCode !== undefined? wordCode.split('-') : undefined;
     
     useEffect(() => {
-        if (words !== undefined) {
+        if (words !== undefined && resources !== undefined) {
 
             const wordcoder = WordCode.lang.get(lang);
 
@@ -376,30 +380,70 @@ const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
         
             const suffix = wordcoder.decode(words);
         
-            if (resources.config.peersForDiscovery === undefined) {
-                throw new Error('Trying to do object discovery for words ' + words.join('-') + ', but config.peersForDiscovery is undefined.');
-            }
-        
-            const linkupServers = resources.config.linkupServers;
-            const discoveryEndpoint = resources.config.peersForDiscovery[0].endpoint;
-            
-            const replyStream = resources.mesh.findObjectByHashSuffix(suffix, linkupServers, discoveryEndpoint, count, 30, false, includeErrors);
-
-            const currentResults = new Map();
-            processReplyStream(replyStream as AsyncStream<ObjectDiscoveryReply>, currentResults, setResults);
-
-            return () => {
-                replyStream.close();
-                setResults(new Map());
-            };
+            return performDiscovery(resources, suffix, setResults, count, includeErrors);
         }
 
         return undefined;
-    }, [wordCode, lang, count]);
+    }, [resources, wordCode, lang, count]);
     
-
-
     return results;
+ }
+
+ const useObjectDiscoveryIfNecessary = (resources?: Resources, hash?: Hash, object?: HashedObject) => {
+
+    const [result, setResult] = useState<HashedObject>();
+
+     const [discoveryResults, setDiscoveryResults] = useState<Map<Hash, ObjectDiscoveryReply>>(new Map());
+
+     useEffect(() => {
+        let cleanUp: (()=>void) | undefined = undefined;
+
+        if (object !== undefined) {
+            setResult(object);
+        } else if (hash !== undefined && resources !== undefined) {
+            const suffix = ObjectBroadcastAgent.hexSuffixFromHash(hash, ObjectBroadcastAgent.defaultBroadcastedSuffixBits);
+            cleanUp = performDiscovery(resources, suffix, setDiscoveryResults, 1, false);
+        }
+
+        return cleanUp;
+
+     }, [resources, hash, object]);
+
+     useEffect(() => {
+
+        if (discoveryResults.size > 0) {
+            const discovered = discoveryResults.values().next().value as ObjectDiscoveryReply;
+
+            if (discovered.error === undefined && discovered.object !== undefined && result === undefined) {
+                if (discovered.object.hash() === hash) {
+                    setResult(discovered.object);
+                }
+                
+            }
+        }
+
+     }, [discoveryResults]);
+
+     return result;
+ }
+
+ const performDiscovery = (resources: Resources, suffix: string, setResults: React.Dispatch<React.SetStateAction<Map<string, ObjectDiscoveryReply>>>, count: number, includeErrors: boolean) => {
+    if (resources.config.peersForDiscovery === undefined) {
+        throw new Error('Trying to do object discovery for hash suffix ' + suffix + ', but config.peersForDiscovery is undefined.');
+    }
+
+    const linkupServers = resources.config.linkupServers;
+    const discoveryEndpoint = resources.config.peersForDiscovery[0].endpoint;
+    
+    const replyStream = resources.mesh.findObjectByHashSuffix(suffix, linkupServers, discoveryEndpoint, count, 30, false, includeErrors);
+
+    const currentResults = new Map();
+    processReplyStream(replyStream as AsyncStream<ObjectDiscoveryReply>, currentResults, setResults);
+
+    return () => {
+        replyStream.close();
+        setResults(new Map());
+    };
  }
 
  const processReplyStream = async (replyStream: AsyncStream<ObjectDiscoveryReply>, currentResults: Map<Hash, ObjectDiscoveryReply>, setResults: (r: Map<Hash, ObjectDiscoveryReply>) => void) => {
@@ -416,10 +460,12 @@ const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
             }            
         }
     } catch (e: any) {
+        console.log('processing reply stream:')
+        console.log(e);
         // done, timeouted or completed
     }
 
  }
 
 
-export { StateObject, PeerResources, usePeerResources, PeerResourcesUpdater, usePeerResourcesUpdater, useSpace, useStateObject, useStateObjectByHash, useObjectDiscovery };
+export { StateObject, PeerResources, usePeerResources, PeerResourcesUpdater, usePeerResourcesUpdater, useSpace, useStateObject, useStateObjectByHash, useObjectDiscovery, useObjectDiscoveryWithResources, useObjectDiscoveryIfNecessary };
