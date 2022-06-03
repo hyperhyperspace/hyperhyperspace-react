@@ -1,4 +1,4 @@
-import { Hash, HashedObject, MutableObject, MutationEvent, MutationObserver, MutationOp, ObjectBroadcastAgent, ObjectDiscoveryReply, Resources, Space, SpaceEntryPoint, SpaceInit, WordCode } from '@hyper-hyper-space/core';
+import { Hash, HashedObject, LinkupAddress, MutableObject, MutationEvent, MutationObserver, MutationOp, ObjectBroadcastAgent, ObjectDiscoveryReply, Resources, Space, SpaceEntryPoint, SpaceInit, WordCode } from '@hyper-hyper-space/core';
 import { AsyncStream } from '@hyper-hyper-space/core/dist/util/streams';
 import React, { useContext, useState, useEffect } from 'react';
 
@@ -433,9 +433,9 @@ const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
     }
 
     const linkupServers = resources.config.linkupServers;
-    const discoveryEndpoint = resources.config.peersForDiscovery[0].endpoint;
+    const discoveryAddress = LinkupAddress.fromURL(resources.config.peersForDiscovery[0].endpoint, resources.config.peersForDiscovery[0].identity);
     
-    const replyStream = resources.mesh.findObjectByHashSuffix(suffix, linkupServers, discoveryEndpoint, count, 30, false, includeErrors);
+    const replyStream = resources.mesh.findObjectByHashSuffix(suffix, linkupServers, discoveryAddress, count, 30, false, includeErrors);
 
     const currentResults = new Map();
     processReplyStream(replyStream as AsyncStream<ObjectDiscoveryReply>, currentResults, setResults);
