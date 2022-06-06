@@ -74,128 +74,6 @@ const useSpace = <T extends HashedObject>(init?: SpaceInit, broadcast?: boolean,
 
 };
 
-/*
-
-class StateProxy {
-
-    current?: HashedObject;
-    
-    fields: {[key: string]: StateProxy};
-    contents: {[key: Hash]: StateProxy}
-
-    constructor(current?: HashedObject, oldState?: StateProxy, mut?: MutationEvent) {
-
-        this.current = current;
-
-        this.fields   = {};
-        this.contents = {};
-
-        if (current !== undefined) {
-
-            let field       : location<HashedObject>|undefined = undefined;
-            let emitterHash : Hash|undefined                   = undefined;
-            let nextMut     : MutationEvent|undefined          = undefined;
-
-
-            if (mut !== undefined && mut.path !== undefined && mut.path.length > 0) {
-                const nextPath = Array.from(mut.path);
-                field = nextPath.pop() as location<HashedObject>;
-                emitterHash = field.emitter.hash();
-                nextMut = {action: mut.action, data: mut.data, emitter: mut.emitter, path: nextPath};
-            }
-
-            for (const [path, subobj] of current.getDirectSubObjects()) {
-
-                if (path === field?.name) {
-                    this.fields[path] = new StateProxy(subobj, oldState?.fields[path], nextMut);
-                    emitterHash = undefined; // the mutation was in a field, if this same object is also
-                                             // in the contents, do not mark it as mutated there
-                } else {
-                    this.fields[path] = oldState?.fields[path] || new StateProxy(subobj);
-                }
-                
-            }
-
-            if (current instanceof MutableObject) {
-                for(const [hash, obj] of current.getMutableContents()) {
-                    if (hash === emitterHash) {
-                        this.contents[hash] = new StateProxy(obj, oldState?.contents[hash], nextMut);
-                    } else {
-                        this.contents[hash] = oldState?.contents[hash] || new StateProxy(obj);
-                    }
-                }
-            }
-        }
-    }
-
-}
-
-const useObjectState = <T extends HashedObject>(objOrPromise?: T | Promise<T|undefined>) => {
-    
-    const init = objOrPromise instanceof HashedObject? objOrPromise : undefined;
-    const [objectState, setObjectState] = useState<StateProxy | undefined> (new StateProxy(init));
-
-    useEffect(() => {
-    
-    let prom: Promise<T | undefined> | undefined;
-
-    if (objOrPromise instanceof Promise) {
-        prom = objOrPromise;
-    } else if (objOrPromise !== undefined) {
-        prom = Promise.resolve(objOrPromise);
-    } else {
-        prom = undefined;
-    }
-
-    let loadedObj: T | undefined;
-
-    let destroyed = false;
-    //let mutCallback = (_mut: MutationOp) => {
-    //    setStateObject(new StateObject(loadedObj));
-    //}
-
-    let mutObserver: MutationObserver = {
-        callback: (ev: MutationEvent) => {
-            console.log('new state for ' + loadedObj?.hash() + ':');
-            console.log(ev)
-            setObjectState((oldState: StateProxy|undefined) => new StateProxy(loadedObj, oldState, ev));
-        }
-    };
-
-    
-
-    prom?.then(obj => {
-
-        loadedObj = obj;
-
-        if (obj !== undefined) {
-
-            if (!destroyed) {
-                obj.addMutationObserver(mutObserver);
-            }
-            
-            setObjectState(new StateProxy(obj));
-
-        }
-
-    });
-
-
-    return () => {
-
-        destroyed = true;
-
-        if (loadedObj !== undefined && loadedObj instanceof MutableObject) {
-            loadedObj.removeMutationObserver(mutObserver);
-        }  
-    };
-}, [objOrPromise]);
-
-return objectState;
-
-};
-*/
-
 
 class StateObject<T extends HashedObject> {
 
@@ -212,7 +90,7 @@ class StateObject<T extends HashedObject> {
 
 // This function loads the object by its hash from the store and sets up store watching.
 
-const useStateObjectByHash = <T extends HashedObject>(hash?: Hash, renderOnLoadAll=false) => {
+const loadAndUseObjectState = <T extends HashedObject>(hash?: Hash, renderOnLoadAll=false) => {
 
     const resources = usePeerResources();
     const [stateObject, setSateObject] = useState<StateObject<T> | undefined> (undefined);
@@ -275,7 +153,7 @@ const useStateObjectByHash = <T extends HashedObject>(hash?: Hash, renderOnLoadA
 // This binding uses the object as-is: it doesn't attempt to set up store watching.
 // The caller should pass an object that's ready (bound to the store, etc.).
 
-const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | undefined>, filterMutations?:(ev: MutationEvent) => boolean) => {
+const useObjectState = <T extends HashedObject>(objOrPromise?: T | Promise<T | undefined>, filterMutations?:(ev: MutationEvent) => boolean) => {
 
     const init = objOrPromise instanceof HashedObject? objOrPromise : undefined;
     const [stateObject, setStateObject] = useState<StateObject<T> | undefined> (new StateObject(init));
@@ -468,4 +346,4 @@ const useStateObject = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
  }
 
 
-export { StateObject, PeerResources, usePeerResources, PeerResourcesUpdater, usePeerResourcesUpdater, useSpace, useStateObject, useStateObjectByHash, useObjectDiscovery, useObjectDiscoveryWithResources, useObjectDiscoveryIfNecessary };
+export { StateObject, PeerResources, usePeerResources, PeerResourcesUpdater, usePeerResourcesUpdater, useSpace, useObjectState, loadAndUseObjectState, useObjectDiscovery, useObjectDiscoveryWithResources, useObjectDiscoveryIfNecessary };
