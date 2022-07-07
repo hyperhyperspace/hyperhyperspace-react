@@ -267,9 +267,9 @@ const useObjectState = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
     return results;
  }
 
- const useObjectDiscoveryIfNecessary = (resources?: Resources, hash?: Hash, object?: HashedObject) => {
+ const useObjectDiscoveryIfNecessary = <T extends HashedObject>(resources?: Resources, hash?: Hash, object?: T) => {
 
-    const [result, setResult] = useState<HashedObject>();
+    const [result, setResult] = useState<T>();
 
      const [discoveryResults, setDiscoveryResults] = useState<Map<Hash, ObjectDiscoveryReply>>(new Map());
 
@@ -294,7 +294,7 @@ const useObjectState = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
 
             if (discovered.error === undefined && discovered.object !== undefined && result === undefined) {
                 if (discovered.object.hash() === hash) {
-                    setResult(discovered.object);
+                    setResult(discovered.object as T);
                 }
                 
             }
