@@ -1,6 +1,6 @@
 import { Hash, HashedObject, LinkupAddress, MutableObject, MutationEvent, MutationObserver, MutationOp, ObjectBroadcastAgent, ObjectDiscoveryReply, Resources, Space, SpaceEntryPoint, SpaceInit, WordCode } from '@hyper-hyper-space/core';
 import { AsyncStream } from '@hyper-hyper-space/core/dist/util/streams';
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, useRef } from 'react';
 
 
 const PeerResources = React.createContext<Resources>(undefined as any as Resources);
@@ -153,10 +153,11 @@ const loadAndUseObjectState = <T extends HashedObject>(hash?: Hash, renderOnLoad
 // This binding uses the object as-is: it doesn't attempt to set up store watching.
 // The caller should pass an object that's ready (bound to the store, etc.).
 
-const useObjectState = <T extends HashedObject>(objOrPromise?: T | Promise<T | undefined>, filterMutations?:(ev: MutationEvent) => boolean) => {
+const useObjectState = <T extends HashedObject>(objOrPromise?: T | Promise<T | undefined>, options?: {filterMutations?:(ev: MutationEvent) => boolean, debounceFreq?: number}) => {
 
     const init = objOrPromise instanceof HashedObject? objOrPromise : undefined;
     const [stateObject, setStateObject] = useState<StateObject<T> | undefined> (new StateObject(init));
+    const fireTimeout = useRef<number>();
 
     useEffect(() => {
 
@@ -177,15 +178,39 @@ const useObjectState = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
         //    setStateObject(new StateObject(loadedObj));
         //}
 
+        let debounceTimeout: any = undefined;
+
         let mutObserver: MutationObserver =
             (ev: MutationEvent) => {
-                console.log('new state for ' + loadedObj?.hash() + ':');
-                console.log(ev)
-                if (filterMutations === undefined || filterMutations(ev)) {
-                    setStateObject(new StateObject(loadedObj));
+                //console.log('new state for ' + loadedObj?.hash() + ':');
+                //console.log(ev)
+                if (options?.filterMutations === undefined || options.filterMutations(ev)) {
+
+                    if (options?.debounceFreq === undefined) {
+                        console.log('new state for ' + loadedObj?.hash());
+                        setStateObject(new StateObject(loadedObj));
+                    } else {
+
+                        if (fireTimeout.current !== undefined) {
+                            clearTimeout(fireTimeout.current);
+                            console.log('B: cleared timeout ' + fireTimeout.current)
+                        }
+
+                        fireTimeout.current = window.setTimeout(() => {
+
+                            console.log('B: ran timeout: ' + fireTimeout.current)
+                            console.log('new state for ' + loadedObj?.hash() + ' (debounced)');
+                            setStateObject(new StateObject(loadedObj));
+                        }, options.debounceFreq);
+
+                        console.log('B: set timeout ' + fireTimeout.current);
+                            
+                        ;
+                    }
+                    
                 } else { 
-                    console.log('rejecting:');
-                    console.log(ev);
+                    //console.log('rejecting:');
+                    //console.log(ev);
                 }
             };
         
@@ -228,7 +253,11 @@ const useObjectState = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
                 //loadedObj.watchForChanges(false);
                 loadedObj.removeMutationObserver(mutObserver);
                 //loadedObj.deleteMutationOpCallback(mutCallback);
-            }  
+            }
+
+            if (debounceTimeout !== undefined) {
+                clearInterval(debounceTimeout);
+            }
         };
     }, [objOrPromise]);
 
