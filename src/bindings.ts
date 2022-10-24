@@ -75,18 +75,18 @@ const useSpace = <T extends HashedObject>(init?: SpaceInit, broadcast?: boolean,
 };
 
 
-class StateObject<T extends HashedObject> {
+class ObjectState<T extends HashedObject> {
 
     value?: T;
     debounceFreq?: React.MutableRefObject<number | undefined>;
     debounceTimeout?: React.MutableRefObject<number | undefined>;
-    setStateObject?: React.MutableRefObject<React.Dispatch<React.SetStateAction<StateObject<T> | undefined>> | undefined>;
+    setObjectState?: React.MutableRefObject<React.Dispatch<React.SetStateAction<ObjectState<T> | undefined>> | undefined>;
 
-    constructor(obj?: T, debounceFreq?: React.MutableRefObject<number | undefined>, debounceTimeout?: React.MutableRefObject<number | undefined>, setStateObject?: React.MutableRefObject<React.Dispatch<React.SetStateAction<StateObject<T> | undefined>> | undefined>) {
+    constructor(obj?: T, debounceFreq?: React.MutableRefObject<number | undefined>, debounceTimeout?: React.MutableRefObject<number | undefined>, setObjectState?: React.MutableRefObject<React.Dispatch<React.SetStateAction<ObjectState<T> | undefined>> | undefined>) {
         this.value = obj;
         this.debounceFreq = debounceFreq;
         this.debounceTimeout = debounceTimeout;
-        this.setStateObject = setStateObject;
+        this.setObjectState = setObjectState;
     }
 
     getValue(): T|undefined {
@@ -98,15 +98,15 @@ class StateObject<T extends HashedObject> {
     }
 
     setDebounceFreq(val: number|undefined) {
-        if (this.debounceFreq === undefined || this.debounceTimeout === undefined || this.setStateObject === undefined) {
+        if (this.debounceFreq === undefined || this.debounceTimeout === undefined || this.setObjectState === undefined) {
             throw new Error('Cannot set new debounce frequency.');
         }
 
         if (this.debounceTimeout.current !== undefined) {
             this.debounceTimeout.current = undefined;
             window.setTimeout(() => {
-                if (this.setStateObject !== undefined) {
-                    this.setStateObject.current!(new StateObject(this.value, this.debounceTimeout, this.debounceTimeout, this.setStateObject));
+                if (this.setObjectState !== undefined) {
+                    this.setObjectState.current!(new ObjectState(this.value, this.debounceTimeout, this.debounceTimeout, this.setObjectState));
                 }
             }, 0);
             
@@ -121,7 +121,7 @@ class StateObject<T extends HashedObject> {
 const loadAndUseObjectState = <T extends HashedObject>(hash?: Hash, renderOnLoadAll=false) => {
 
     const resources = usePeerResources();
-    const [stateObject, setSateObject] = useState<StateObject<T> | undefined> (undefined);
+    const [objectState, setObjectSate] = useState<ObjectState<T> | undefined> (undefined);
 
     useEffect(() => {
 
@@ -130,7 +130,7 @@ const loadAndUseObjectState = <T extends HashedObject>(hash?: Hash, renderOnLoad
 
         let mutCallback = (_mut: MutationOp) => {
             if (obj !== undefined) {
-                setSateObject(new StateObject(obj));
+                setObjectSate(new ObjectState(obj));
             }
         };
 
@@ -144,7 +144,7 @@ const loadAndUseObjectState = <T extends HashedObject>(hash?: Hash, renderOnLoad
                         
                         obj.loadAndWatchForChanges().then(() => {
                             if (!destroyed) {
-                                setSateObject(new StateObject(obj as any as T));
+                                setObjectSate(new ObjectState(obj as any as T));
                                 if (!renderOnLoadAll) {
                                     obj.addMutationOpCallback(mutCallback);    
                                 }
@@ -152,7 +152,7 @@ const loadAndUseObjectState = <T extends HashedObject>(hash?: Hash, renderOnLoad
                         });
                     }
                     if (!destroyed) {
-                        setSateObject(new StateObject(obj as any as T));
+                        setObjectSate(new ObjectState(obj as any as T));
                     }
                 }
             });
@@ -170,7 +170,7 @@ const loadAndUseObjectState = <T extends HashedObject>(hash?: Hash, renderOnLoad
         };
     }, [resources, hash]);
 
-    return stateObject;
+    return objectState;
 
  };
 
@@ -189,10 +189,10 @@ const useObjectState = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
     
     const debounceFreq = useRef<number|undefined>(options?.debounceFreq);
     const fireTimeout = useRef<number>();
-    const setStateObjectRef = useRef<React.Dispatch<React.SetStateAction<StateObject<T> | undefined>>>();
+    const setObjectStateRef = useRef<React.Dispatch<React.SetStateAction<ObjectState<T> | undefined>>>();
     
-    const [stateObject, setStateObject] = useState<StateObject<T> | undefined> (new StateObject(init, debounceFreq, fireTimeout, setStateObjectRef ));
-    setStateObjectRef.current = setStateObject;
+    const [objectState, setObjectState] = useState<ObjectState<T> | undefined> (new ObjectState(init, debounceFreq, fireTimeout, setObjectStateRef ));
+    setObjectStateRef.current = setObjectState;
     
     
 
@@ -224,14 +224,14 @@ const useObjectState = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
                 if (options?.filterMutations === undefined || options.filterMutations(ev)) {
 
                     if (debounceFreq.current === undefined) {
-                        setStateObject(new StateObject(loadedObj, debounceFreq, fireTimeout, setStateObjectRef));
+                        setObjectState(new ObjectState(loadedObj, debounceFreq, fireTimeout, setObjectStateRef));
                     } else {
                         if (fireTimeout.current !== undefined) {
                             clearTimeout(fireTimeout.current);
                         }
 
                         fireTimeout.current = window.setTimeout(() => {
-                            setStateObject(new StateObject(loadedObj, debounceFreq, fireTimeout, setStateObjectRef));
+                            setObjectState(new ObjectState(loadedObj, debounceFreq, fireTimeout, setObjectStateRef));
                         }, debounceFreq.current);
                     }
                     
@@ -265,7 +265,7 @@ const useObjectState = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
                     });*/
                 }
                 if (!destroyed) {
-                    setStateObject(new StateObject(obj, debounceFreq, fireTimeout, setStateObjectRef));
+                    setObjectState(new ObjectState(obj, debounceFreq, fireTimeout, setObjectStateRef));
                     console.log('set initial value for ' + obj.hash(), obj)
                 }
             }
@@ -289,7 +289,7 @@ const useObjectState = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
         };
     }, [objOrPromise]);
 
-    return stateObject;
+    return objectState;
 
  };
 
@@ -403,4 +403,4 @@ const useObjectState = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
  }
 
 
-export { StateObject, PeerResources, usePeerResources, PeerResourcesUpdater, usePeerResourcesUpdater, useSpace, useObjectState, loadAndUseObjectState, useObjectDiscovery, useObjectDiscoveryWithResources, useObjectDiscoveryIfNecessary };
+export { ObjectState, PeerResources, usePeerResources, PeerResourcesUpdater, usePeerResourcesUpdater, useSpace, useObjectState, loadAndUseObjectState, useObjectDiscovery, useObjectDiscoveryWithResources, useObjectDiscoveryIfNecessary };
