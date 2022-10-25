@@ -266,7 +266,7 @@ const useObjectState = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
                 }
                 if (!destroyed) {
                     setObjectState(new ObjectState(obj, debounceFreq, fireTimeout, setObjectStateRef));
-                    console.log('set initial value for ' + obj.hash(), obj)
+                    //console.log('set initial value for ' + obj.hash(), obj)
                 }
             }
     
@@ -350,7 +350,7 @@ const useObjectState = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
             const discovered = discoveryResults.values().next().value as ObjectDiscoveryReply;
 
             if (discovered.error === undefined && discovered.object !== undefined && result === undefined) {
-                if (discovered.object.hash() === hash) {
+                if (discovered.object.getLastHash() === hash) {
                     setResult(discovered.object as T);
                 }
                 
