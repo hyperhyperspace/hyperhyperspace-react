@@ -1,4 +1,4 @@
-import { Hash, HashedObject, LinkupAddress, MutableObject, MutationEvent, MutationObserver, MutationOp, ObjectBroadcastAgent, ObjectDiscoveryReply, Resources, Space, SpaceEntryPoint, SpaceInit, WordCode } from '@hyper-hyper-space/core';
+import { Hash, HashedObject, LinkupAddress, MutableObject, MutationEvent, MutationObserver, MutationOp, ObjectBroadcastAgent, ObjectDiscoveryReply, Resources, Space, SpaceEntryPoint, SpaceInit, SyncEvent, SyncObserver, SyncState, WordCode } from '@hyper-hyper-space/core';
 import { AsyncStream } from '@hyper-hyper-space/core/dist/util/streams';
 import React, { useContext, useState, useEffect, useRef } from 'react';
 
@@ -73,7 +73,6 @@ const useSpace = <T extends HashedObject>(init?: SpaceInit, broadcast?: boolean,
     return entryPoint as T|undefined;
 
 };
-
 
 class ObjectState<T extends HashedObject> {
 
@@ -174,8 +173,62 @@ const loadAndUseObjectState = <T extends HashedObject>(hash?: Hash, renderOnLoad
 
  };
 
- 
 
+const useSyncState = (objOrPromise?: MutableObject | Promise<MutableObject | undefined>, peerGroupId?: string) => {
+
+    const [objectSyncState, setObjectSyncState] = useState<SyncState|undefined>()
+
+    let loadedObj: MutableObject|undefined = undefined; 
+
+    useEffect(() => {
+        let prom: Promise<MutableObject | undefined> | undefined;
+
+        if (objOrPromise instanceof Promise) {
+            prom = objOrPromise;
+        } else if (objOrPromise !== undefined) {
+            prom = Promise.resolve(objOrPromise);
+        } else {
+            prom = undefined;
+        }
+
+        let destroyed = false;
+
+        const obs: SyncObserver = (ev: SyncEvent) => {
+            console.log('new sync state for ' + loadedObj?.getLastHash(), ev.data);
+            setObjectSyncState(ev.data);
+        };
+
+        prom?.then(async obj => {
+
+            if (obj !== undefined) {
+                if (obj instanceof MutableObject) {
+
+                    loadedObj = obj;
+
+                    if (!destroyed) {
+                        obj.addSyncObserver(obs, peerGroupId);
+
+                        const initial = await obj.getSyncState(peerGroupId);
+                        setObjectSyncState(initial);
+                        console.log('initial sync state for ' + loadedObj?.getLastHash(), initial);
+                    }
+                    
+                }
+            }
+        });
+
+        return () => {
+            destroyed = true;
+
+            if (loadedObj !== undefined && loadedObj instanceof MutableObject) {
+                loadedObj.removeSyncObserver(obs, peerGroupId);
+            }
+        }
+    });
+
+    return objectSyncState;
+
+};
 
 
 // This binding uses the object as-is: it doesn't attempt to set up store watching.
@@ -249,16 +302,16 @@ const useObjectState = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
             if (obj !== undefined) {
 
                 if (obj instanceof HashedObject) {
-                    obj.addMutationObserver(mutObserver);
+                    obj.addObserver(mutObserver);
                     /*if (renderOnLoadAll) {
-                        obj.addMutationObserver(mutObserver);
+                        obj.addObserver(mutObserver);
                         //obj.addMutationOpCallback(mutCallback);
                     }
                     obj.loadAndWatchForChanges().then(() => {
                         if (!destroyed) {
                             setStateObject(new StateObject(obj));
                             if (!renderOnLoadAll) {
-                                obj.addMutationObserver(mutObserver);
+                                obj.addObserver(mutObserver);
                                 //obj.addMutationOpCallback(mutCallback);
                             }
                         }
@@ -279,7 +332,7 @@ const useObjectState = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
 
             if (loadedObj !== undefined && loadedObj instanceof HashedObject) {
                 //loadedObj.watchForChanges(false);
-                loadedObj.removeMutationObserver(mutObserver);
+                loadedObj.removeObserver(mutObserver);
                 //loadedObj.deleteMutationOpCallback(mutCallback);
             }
 
@@ -403,4 +456,6 @@ const useObjectState = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
  }
 
 
-export { ObjectState, PeerResources, usePeerResources, PeerResourcesUpdater, usePeerResourcesUpdater, useSpace, useObjectState, loadAndUseObjectState, useObjectDiscovery, useObjectDiscoveryWithResources, useObjectDiscoveryIfNecessary };
+export { ObjectState, PeerResources, usePeerResources, PeerResourcesUpdater, usePeerResourcesUpdater, 
+         useSpace, useObjectState, loadAndUseObjectState, useObjectDiscovery, 
+         useObjectDiscoveryWithResources, useObjectDiscoveryIfNecessary, useSyncState };
