@@ -200,7 +200,7 @@ const useSyncState = (objOrPromise?: MutableObject | Promise<MutableObject | und
 
         prom?.then(async obj => {
 
-            if (obj !== undefined) {
+            if (obj !== undefined && peerGroupId !== undefined) {
                 if (obj instanceof MutableObject) {
 
                     loadedObj = obj;
@@ -224,7 +224,7 @@ const useSyncState = (objOrPromise?: MutableObject | Promise<MutableObject | und
                 loadedObj.removeSyncObserver(obs, peerGroupId);
             }
         }
-    });
+    }, [objOrPromise, peerGroupId]);
 
     return objectSyncState;
 
