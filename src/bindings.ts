@@ -173,6 +173,84 @@ const loadAndUseObjectState = <T extends HashedObject>(hash?: Hash, renderOnLoad
 
  };
 
+const useSyncStates: ((objs: Array<[mut: MutableObject, peerGroupId: string]>) => {[key: Hash]: SyncState}) = (objs: Array<[mut: MutableObject, peerGroupId: string]>) => {
+
+    const [objectSyncStates, setObjectSyncStates] = useState<{[key: Hash]: SyncState}>({});
+
+    const observers = useRef<Map<Hash, [MutableObject, string, MutationObserver]>>(new Map());
+
+    useEffect(() => {
+
+
+        const unseen = new Set(Object.keys(objectSyncStates));
+
+        for (const [mut, peerGroupId] of objs) {
+
+            const hash = mut.getLastHash();
+
+            unseen.delete(hash);
+
+            if (!observers.current.has(hash)) {
+
+                const obs = (ev: MutationEvent) => {
+
+                    const states = {...objectSyncStates};
+
+                    states[hash] = ev.data;
+
+                    setObjectSyncStates(states);
+                }
+
+                observers.current.set(hash, [mut, peerGroupId, obs]);
+
+                mut.getSyncState(peerGroupId).then((syncState?: SyncState) => {
+                    
+                    mut.addSyncObserver(obs, peerGroupId);
+                    if (syncState !== undefined) {
+
+                        const states = {...objectSyncStates};
+
+                        states[hash] = syncState;
+
+                        setObjectSyncStates(states)
+                    }
+                    
+                }).catch((e: any) => {
+                    console.log('Error retrieving initial state: ' + e);
+                });
+            }
+        }
+
+        if (unseen.size > 0) {
+            const newSyncStates: {[key: Hash]: SyncState} = {...objectSyncStates};
+
+            for (const hash of unseen) {
+                const pair = observers.current.get(hash);
+
+                if (pair !== undefined) {
+                    const [mut, peerGroupId, obs] = pair;
+
+                    mut.removeSyncObserver(obs, peerGroupId);
+                    observers.current.delete(mut.getLastHash());
+
+                    delete newSyncStates[hash];
+                }
+            }
+
+            setObjectSyncStates(newSyncStates);
+        }
+
+        return () => {
+            for (const [mut, peerGroupId, obs] of observers.current.values()) {
+                mut.removeSyncObserver(obs, peerGroupId);
+                observers.current.delete(mut.getLastHash());
+            }
+        }
+    }, [objs]);
+
+    return objectSyncStates;
+
+ };
 
 const useSyncState = (objOrPromise?: MutableObject | Promise<MutableObject | undefined>, peerGroupId?: string) => {
 
@@ -458,4 +536,5 @@ const useObjectState = <T extends HashedObject>(objOrPromise?: T | Promise<T | u
 
 export { ObjectState, PeerResources, usePeerResources, PeerResourcesUpdater, usePeerResourcesUpdater, 
          useSpace, useObjectState, loadAndUseObjectState, useObjectDiscovery, 
-         useObjectDiscoveryWithResources, useObjectDiscoveryIfNecessary, useSyncState };
+         useObjectDiscoveryWithResources, useObjectDiscoveryIfNecessary,
+         useSyncState, useSyncStates };
